@@ -1,46 +1,38 @@
 #!/bin/bash
+# 文件名：run_remote.sh
+# 描述：从远程服务器下载脚本并执行，功能与
+#       bash <(curl -L -s media.ispvps.com)
+#       相同。
+#
+# 警告：直接执行远程代码存在风险，请务必先确认该远程脚本的安全性！
 
-# 获取本机 IP 和归属地
-IP_INFO=$(curl -s https://ipinfo.io)
-IP=$(echo "$IP_INFO" | grep '"ip":' | awk -F'"' '{print $4}')
-COUNTRY=$(echo "$IP_INFO" | grep '"country":' | awk -F'"' '{print $4}')
-ASN=$(echo "$IP_INFO" | grep '"org":' | awk -F'"' '{print $4}')
-echo "🔹 你的 IP: $IP ($ASN, $COUNTRY)"
-echo "--------------------------------------"
+set -euo pipefail
 
-# 定义检测函数
-check_service() {
-    local service_name=$1
-    local test_url=$2
-    local result=$(curl -L -s -o /dev/null -w "%{http_code}" "$test_url")
-    
-    if [[ "$result" == "200" ]]; then
-        echo "✅ $service_name: 已解锁"
-    elif [[ "$result" == "403" || "$result" == "451" ]]; then
-        echo "❌ $service_name: 被封锁"
-    else
-        echo "⚠️ $service_name: 无法确定 (状态码: $result)"
-    fi
-}
+# 远程脚本 URL（建议使用 https 协议，如果服务器支持的话）
+REMOTE_URL="https://media.ispvps.com"
 
-# 逐个检测服务
-echo "🎬 正在检测流媒体服务..."
-check_service "Netflix" "https://www.netflix.com/title/80018499"
-check_service "Disney+" "https://www.disneyplus.com"
-check_service "Amazon Prime Video" "https://www.primevideo.com"
+# 创建一个临时文件用于存放下载的脚本
+TEMP_FILE=$(mktemp /tmp/remote_script.XXXXXX)
 
-echo "📱 正在检测社交媒体..."
-check_service "ChatGPT" "https://chat.openai.com"
-check_service "TikTok" "https://www.tiktok.com"
-check_service "Instagram" "https://www.instagram.com"
-check_service "LINE" "https://line.me"
-check_service "WhatsApp" "https://web.whatsapp.com"
-check_service "X.com (Twitter)" "https://twitter.com"
-check_service "Google" "https://www.google.com"
+echo "正在从 ${REMOTE_URL} 下载远程脚本..."
+if ! curl -L -s -o "$TEMP_FILE" "$REMOTE_URL"; then
+  echo "错误：下载远程脚本失败！"
+  exit 1
+fi
 
-echo "🎵 正在检测音乐和游戏..."
-check_service "Spotify" "https://www.spotify.com"
-STEAM_CURRENCY=$(curl -s "https://store.steampowered.com/iplookup/" | grep -oP '(?<="currency":")[^"]+')
-echo "🎮 Steam 货币区域: $STEAM_CURRENCY"
+echo "下载成功。"
+echo "----------------------"
+echo "下载的脚本内容如下（请确认其安全性）："
+echo "----------------------"
+cat "$TEMP_FILE"
+echo "----------------------"
 
-echo "✅ 检测完成！"
+# 暂停，等待用户确认是否继续执行
+read -p "确认无误后按 Enter 键继续执行该脚本，或 Ctrl+C 中断..."
+
+echo "正在执行下载的远程脚本..."
+bash "$TEMP_FILE"
+
+# 执行完毕后删除临时文件
+rm -f "$TEMP_FILE"
+echo "执行完毕，临时文件已删除。"
