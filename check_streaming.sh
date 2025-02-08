@@ -1,46 +1,80 @@
 #!/bin/bash
 
-# 获取本机 IP 和归属地
-IP_INFO=$(curl -s https://ipinfo.io)
-IP=$(echo "$IP_INFO" | grep '"ip":' | awk -F'"' '{print $4}')
-COUNTRY=$(echo "$IP_INFO" | grep '"country":' | awk -F'"' '{print $4}')
-ASN=$(echo "$IP_INFO" | grep '"org":' | awk -F'"' '{print $4}')
-echo "🔹 你的 IP: $IP ($ASN, $COUNTRY)"
-echo "--------------------------------------"
+# 颜色定义
+Font_Green="\033[32m"
+Font_Red="\033[31m"
+Font_Yellow="\033[33m"
+Font_Suffix="\033[0m"
 
-# 定义检测函数
-check_service() {
-    local service_name=$1
-    local test_url=$2
-    local result=$(curl -L -s -o /dev/null -w "%{http_code}" "$test_url")
+# 生成随机 User-Agent
+generate_random_user_agent() {
+    local browsers=("Chrome" "Firefox" "Edge")
+    local versions=("87.0" "88.0" "89.0")
+    local browser=${browsers[$RANDOM % ${#browsers[@]}]}
+    local version=${versions[$RANDOM % ${#versions[@]}]}
+
+    case $browser in
+        Chrome)
+            UA_Browser="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/$version Safari/537.36"
+            ;;
+        Firefox)
+            UA_Browser="Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:${version%%.*}) Gecko/20100101 Firefox/$version"
+            ;;
+        Edge)
+            UA_Browser="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/${version%.*}.0.0 Safari/537.36 Edg/$version"
+            ;;
+    esac
+}
+
+# 获取本机 IP 和 ISP
+get_network_info() {
+    echo -e "${Font_Yellow}正在获取网络信息...${Font_Suffix}"
+    local_ipv4=$(curl -4 -s --fail --max-time 10 https://api64.ipify.org)
+    local_isp=$(curl -s --fail --max-time 10 "https://api.ip.sb/geoip/$local_ipv4" | grep organization | cut -f4 -d '"')
+
+    echo -e "IPv4 地址：${Font_Green}$local_ipv4${Font_Suffix}"
+    echo -e "ISP 运营商：${Font_Green}$local_isp${Font_Suffix}"
+}
+
+# 检测 Netflix 解锁情况
+check_netflix() {
+    echo -e "${Font_Yellow}正在检测 Netflix...${Font_Suffix}"
+    local result=$(curl -s --fail --max-time 10 --user-agent "$UA_Browser" -I "https://www.netflix.com/title/81280792" | grep "HTTP/2 200")
     
-    if [[ "$result" == "200" ]]; then
-        echo "✅ $service_name: 已解锁"
-    elif [[ "$result" == "403" || "$result" == "451" ]]; then
-        echo "❌ $service_name: 被封锁"
+    if [[ -n "$result" ]]; then
+        echo -e "Netflix 访问状态：${Font_Green}解锁${Font_Suffix}"
     else
-        echo "⚠️ $service_name: 无法确定 (状态码: $result)"
+        echo -e "Netflix 访问状态：${Font_Red}未解锁${Font_Suffix}"
     fi
 }
 
-# 逐个检测服务
-echo "🎬 正在检测流媒体服务..."
-check_service "Netflix" "https://www.netflix.com/title/80018499"
-check_service "Disney+" "https://www.disneyplus.com"
-check_service "Amazon Prime Video" "https://www.primevideo.com"
+# 检测 Disney+ 解锁情况
+check_disney() {
+    echo -e "${Font_Yellow}正在检测 Disney+...${Font_Suffix}"
+    local result=$(curl -s --fail --max-time 10 --user-agent "$UA_Browser" -I "https://www.disneyplus.com" | grep "HTTP/2 200")
+    
+    if [[ -n "$result" ]]; then
+        echo -e "Disney+ 访问状态：${Font_Green}解锁${Font_Suffix}"
+    else
+        echo -e "Disney+ 访问状态：${Font_Red}未解锁${Font_Suffix}"
+    fi
+}
 
-echo "📱 正在检测社交媒体..."
-check_service "ChatGPT" "https://chat.openai.com"
-check_service "TikTok" "https://www.tiktok.com"
-check_service "Instagram" "https://www.instagram.com"
-check_service "LINE" "https://line.me"
-check_service "WhatsApp" "https://web.whatsapp.com"
-check_service "X.com (Twitter)" "https://twitter.com"
-check_service "Google" "https://www.google.com"
+# 检测 TikTok 解锁情况
+check_tiktok() {
+    echo -e "${Font_Yellow}正在检测 TikTok...${Font_Suffix}"
+    local result=$(curl -s --fail --max-time 10 --user-agent "$UA_Browser" "https://www.tiktok.com/" | grep '"region":' | sed 's/.*"region"//' | cut -f2 -d'"')
+    
+    if [[ -n "$result" ]]; then
+        echo -e "TikTok 访问状态：${Font_Green}解锁 (地区：$result)${Font_Suffix}"
+    else
+        echo -e "TikTok 访问状态：${Font_Red}未解锁${Font_Suffix}"
+    fi
+}
 
-echo "🎵 正在检测音乐和游戏..."
-check_service "Spotify" "https://www.spotify.com"
-STEAM_CURRENCY=$(curl -s "https://store.steampowered.com/iplookup/" | grep -oP '(?<="currency":")[^"]+')
-echo "🎮 Steam 货币区域: $STEAM_CURRENCY"
-
-echo "✅ 检测完成！"
+# 运行检测
+generate_random_user_agent
+get_network_info
+check_netflix
+check_disney
+check_tiktok
