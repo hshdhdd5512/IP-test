@@ -29,7 +29,7 @@ generate_random_user_agent() {
 # 获取本机 IP 和 ISP
 get_network_info() {
     echo -e "${Font_Yellow}正在获取网络信息...${Font_Suffix}"
-    local_ipv4=$(curl -4 -s --fail --max-time 10 https://api64.ipify.org)
+    local_ipv4=$(curl -s --fail --max-time 10 https://api64.ipify.org)
     local_isp=$(curl -s --fail --max-time 10 https://ipinfo.io/org)
 
     echo -e "IPv4 地址：${Font_Green}$local_ipv4${Font_Suffix}"
