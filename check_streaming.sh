@@ -30,17 +30,17 @@ generate_random_user_agent() {
 get_network_info() {
     echo -e "${Font_Yellow}正在获取网络信息...${Font_Suffix}"
     local_ipv4=$(curl -4 -s --fail --max-time 10 https://api64.ipify.org)
-    local_isp=$(curl -s --fail --max-time 10 "https://api.ip.sb/geoip/$local_ipv4" | grep organization | cut -f4 -d '"')
+    local_isp=$(curl -s --fail --max-time 10 https://ipinfo.io/org)
 
     echo -e "IPv4 地址：${Font_Green}$local_ipv4${Font_Suffix}"
     echo -e "ISP 运营商：${Font_Green}$local_isp${Font_Suffix}"
 }
 
-# 检测 Netflix 解锁情况
+# Netflix 检测
 check_netflix() {
     echo -e "${Font_Yellow}正在检测 Netflix...${Font_Suffix}"
-    local result=$(curl -s --fail --max-time 10 --user-agent "$UA_Browser" -I "https://www.netflix.com/title/81280792" | grep "HTTP/2 200")
-    
+    local result=$(curl -s --fail -L --max-time 10 --user-agent "$UA_Browser" -I "https://www.netflix.com/title/81280792" | grep "HTTP/2 200")
+
     if [[ -n "$result" ]]; then
         echo -e "Netflix 访问状态：${Font_Green}解锁${Font_Suffix}"
     else
@@ -48,25 +48,25 @@ check_netflix() {
     fi
 }
 
-# 检测 Disney+ 解锁情况
+# Disney+ 检测
 check_disney() {
     echo -e "${Font_Yellow}正在检测 Disney+...${Font_Suffix}"
-    local result=$(curl -s --fail --max-time 10 --user-agent "$UA_Browser" -I "https://www.disneyplus.com" | grep "HTTP/2 200")
-    
+    local result=$(curl -s --fail --max-time 10 --user-agent "$UA_Browser" "https://disney.api.edge.bamgrid.com/device/ip" | grep -o '"countryCode":"[A-Z]*"' | cut -d '"' -f4)
+
     if [[ -n "$result" ]]; then
-        echo -e "Disney+ 访问状态：${Font_Green}解锁${Font_Suffix}"
+        echo -e "Disney+ 访问状态：${Font_Green}解锁 (地区: $result)${Font_Suffix}"
     else
         echo -e "Disney+ 访问状态：${Font_Red}未解锁${Font_Suffix}"
     fi
 }
 
-# 检测 TikTok 解锁情况
+# TikTok 检测
 check_tiktok() {
     echo -e "${Font_Yellow}正在检测 TikTok...${Font_Suffix}"
-    local result=$(curl -s --fail --max-time 10 --user-agent "$UA_Browser" "https://www.tiktok.com/" | grep '"region":' | sed 's/.*"region"//' | cut -f2 -d'"')
-    
+    local result=$(curl -s --fail --max-time 10 --user-agent "$UA_Browser" "https://www.tiktok.com/" | grep -o '"region":"[A-Z]*"' | cut -d '"' -f4)
+
     if [[ -n "$result" ]]; then
-        echo -e "TikTok 访问状态：${Font_Green}解锁 (地区：$result)${Font_Suffix}"
+        echo -e "TikTok 访问状态：${Font_Green}解锁 (地区: $result)${Font_Suffix}"
     else
         echo -e "TikTok 访问状态：${Font_Red}未解锁${Font_Suffix}"
     fi
